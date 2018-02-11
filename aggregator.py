@@ -49,62 +49,66 @@ cursor = conn.cursor()
 threads = []
 
 def exchangeThread(exchange):
-    while True:
-        cursor.execute("SELECT MAX(timestamp) FROM ticker_prices WHERE exchange = %s", (exchange,))
-        latestTimestamp = cursor.fetchone()[0]
+    try:
+        exchangeObject = getattr(ccxt, exchange)()
+        if exchangeObject.hasFetchTickers:
+            try:
+                tickers = exchangeObject.fetch_tickers()
 
-        try:
-            exchangeObject = getattr(ccxt, exchange)()
-            if exchangeObject.hasFetchTickers:
+                for symbol in list(tickers.keys()):
+                    if "/" in symbol:
+                        symbolSplit = symbol.split("/")
+                        baseSymbol = symbolSplit[0]
+                        quoteSymbol = symbolSplit[1]
+                        cursor.execute("DELETE FROM ticker_prices WHERE exchange = %s AND base = %s AND quote = %s", (exchange, baseSymbol, quoteSymbol))
+                        cursor.execute("INSERT INTO ticker_prices (exchange, base, quote, timestamp, bid, ask, high, low) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (exchange, baseSymbol, quoteSymbol, int(tickers[symbol]['timestamp']), tickers[symbol]['bid'], tickers[symbol]['ask'], tickers[symbol]['high'], tickers[symbol]['low']))
+                    else:
+                        print("Symbol not correct format: "+symbol+" on exchange "+exchange)
+                print("Exchange: "+exchange+", symbol: all")
+            except Exception as e:
+                print("An exception of type "+type(e).__name__+" has occurred.")
+        else:
+            exchangeObject.load_markets()
+
+            for symbol in exchangeObject.symbols:
                 try:
-                    tickers = exchangeObject.fetch_tickers()
-
-                    for symbol in list(tickers.keys()):
-                        if "/" in symbol:
-                            symbolSplit = symbol.split("/")
-                            baseSymbol = symbolSplit[0]
-                            quoteSymbol = symbolSplit[1]
-                            cursor.execute("DELETE FROM ticker_prices WHERE exchange = %s AND base = %s AND quote = %s", (exchange, baseSymbol, quoteSymbol))
-                            cursor.execute("INSERT INTO ticker_prices (exchange, base, quote, timestamp, bid, ask, high, low) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (exchange, baseSymbol, quoteSymbol, int(tickers[symbol]['timestamp']), tickers[symbol]['bid'], tickers[symbol]['ask'], tickers[symbol]['high'], tickers[symbol]['low']))
-                        else:
-                            print("Symbol not correct format: "+symbol+" on exchange "+exchange)
-                    print("Exchange: "+exchange+", symbol: all")
+                    if "/" in symbol:
+                        symbolSplit = symbol.split("/")
+                        baseSymbol = symbolSplit[0]
+                        quoteSymbol = symbolSplit[1]
+                        ticker = exchangeObject.fetch_ticker(symbol)
+                        time.sleep(exchangeObject.rateLimit/800)
+                        cursor.execute("DELETE FROM ticker_prices WHERE exchange = %s AND base = %s AND quote = %s", (exchange, baseSymbol, quoteSymbol))
+                        cursor.execute("INSERT INTO ticker_prices (exchange, base, quote, timestamp, bid, ask, high, low) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (exchange, baseSymbol, quoteSymbol, int(ticker['timestamp']), ticker['bid'], ticker['ask'], ticker['high'], ticker['low']))
+                        print("Exchange: "+exchange+", symbol: "+symbol)
+                    else:
+                        print("Symbol not correct format: "+symbol+" on exchange "+exchange)
                 except Exception as e:
-                    print(e)
-            else:
-                exchangeObject.load_markets()
+                    print("An exception of type "+type(e).__name__+" has occurred.")
 
-                for symbol in exchangeObject.symbols:
-                    try:
-                        if "/" in symbol:
-                            symbolSplit = symbol.split("/")
-                            baseSymbol = symbolSplit[0]
-                            quoteSymbol = symbolSplit[1]
-                            ticker = exchangeObject.fetch_ticker(symbol)
-                            time.sleep(exchangeObject.rateLimit/800)
-                            cursor.execute("DELETE FROM ticker_prices WHERE exchange = %s AND base = %s AND quote = %s", (exchange, baseSymbol, quoteSymbol))
-                            cursor.execute("INSERT INTO ticker_prices (exchange, base, quote, timestamp, bid, ask, high, low) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (exchange, baseSymbol, quoteSymbol, int(ticker['timestamp']), ticker['bid'], ticker['ask'], ticker['high'], ticker['low']))
-                            print("Exchange: "+exchange+", symbol: "+symbol)
-                        else:
-                            print("Symbol not correct format: "+symbol+" on exchange "+exchange)
-                    except Exception as e:
-                        print(e)
-
-            conn.commit()
-        except Exception as e:
-            print(e)
-
-        cursor.execute("DELETE FROM ticker_prices WHERE timestamp <= %s AND exchange = %s", (latestTimestamp,exchange))
         conn.commit()
+    except Exception as e:
+        print("An exception of type "+type(e).__name__+" has occurred.")
+
+for exchange in exchangeList:
+    t = threading.Thread(target=exchangeThread, args=(exchange,))
+    threads.append(t)
+    t.start()
 
 while True:
-    for exchange in exchangeList:
-        t = threading.Thread(target=exchangeThread, args=(exchange,))
-        threads.append(t)
-        t.start()
-
     for thread in threads:
-        thread.join()
+        if not thread.isAlive():
+            print(thread._args[0])
+            cursor.execute("SELECT MAX(timestamp) FROM ticker_prices WHERE exchange = %s", (thread._args[0],))
+            latestTimestamp = cursor.fetchone()[0]
+
+            thread.start()
+
+            time.sleep(0.25)
+
+            cursor.execute("DELETE FROM ticker_prices WHERE timestamp <= %s AND exchange = %s", (latestTimestamp,thread._args[0]))
+            conn.commit()
+    time.sleep(5)
 
 cursor.close()
 conn.close()
