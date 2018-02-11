@@ -50,7 +50,7 @@ threads = []
 
 def exchangeThread(exchange):
     while True:
-        cursor.execute("SELECT MAX(timestamp) FROM ticker_prices WHERE exchange = %", (exchange,))
+        cursor.execute("SELECT MAX(timestamp) FROM ticker_prices WHERE exchange = %s", (exchange,))
         latestTimestamp = cursor.fetchone()[0]
 
         try:
