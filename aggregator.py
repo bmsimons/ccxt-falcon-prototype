@@ -1,4 +1,4 @@
-import ccxt, pickle, sys, psycopg2, time, threading, json
+import ccxt, pickle, sys, psycopg2, time, threading, json, cfscrape
 
 try:
         conn = psycopg2.connect("dbname='exchange_db' user='postgres' host='localhost' password='PasswordGoesHere'")
@@ -50,7 +50,10 @@ threads = []
 
 def exchangeThread(exchange):
     try:
-        exchangeObject = getattr(ccxt, exchange)()
+        exchangeObject = getattr(ccxt, exchange)({
+            'timeout': 20000,
+            'session': cfscrape.create_scraper(),
+        })
         if exchangeObject.hasFetchTickers:
             try:
                 tickers = exchangeObject.fetch_tickers()

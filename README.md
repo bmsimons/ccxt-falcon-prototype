@@ -47,10 +47,11 @@ CREATE TABLE ticker_prices(
 );
 \q
 
-git clone --branch 1.10.776 https://github.com/ccxt/ccxt.git --single-branch
-git clone --branch 1.4.1 https://github.com/falconry/falcon.git --single-branch
-git clone --branch 19.7.1 https://github.com/benoitc/gunicorn.git --single-branch
-git clone --branch 2_7_3_2 https://github.com/psycopg/psycopg2.git --single-branch
+git clone https://github.com/ccxt/ccxt.git
+git clone https://github.com/falconry/falcon.git
+git clone https://github.com/benoitc/gunicorn.git
+git clone https://github.com/psycopg/psycopg2.git
+git clone https://github.com/Anorov/cloudflare-scrape.git
 
 # Run this for all the cloned GitHub repositories
 # python3 setup.py install
