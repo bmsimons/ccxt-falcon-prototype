@@ -20,6 +20,16 @@ class GetExchange:
             resp.status = falcon.HTTP_404
             resp.media = { 'message': 'Exchange not found.' }
 
+class GetExchangeLastUpdated:
+    def on_get(self, req, resp, exchangeNameGiven):
+        if exchangeNameGiven in exchangeData:
+            cursor.execute("SELECT MAX(timestamp) FROM ticker_prices WHERE exchange = %s", (exchangeNameGiven,))
+            resp.media = cursor.fetchone()[0]
+
+        else:
+            resp.status = falcon.HTTP_404
+            resp.media = { 'message': 'Exchange not found.' }
+
 class GetAssets:
     def on_get(self, req, resp):
         resp.media = assetData
@@ -84,6 +94,7 @@ class GetAssetPriceForExchange:
 api = falcon.API()
 api.add_route('/exchanges', GetExchanges())
 api.add_route('/exchange/{exchangeNameGiven}', GetExchange())
+api.add_route('/exchange/{exchangeNameGiven}/lastUpdated', GetExchangeLastUpdated())
 api.add_route('/assets', GetAssets())
 api.add_route('/asset/{symbolGiven}', GetAsset())
 api.add_route('/price/{baseGiven}/{quoteGiven}/{exchange}', GetAssetPriceForExchange())
