@@ -25,7 +25,6 @@ class GetExchangeLastUpdated:
         if exchangeNameGiven in exchangeData:
             cursor.execute("SELECT MAX(timestamp) FROM ticker_prices WHERE exchange = %s", (exchangeNameGiven,))
             resp.media = cursor.fetchone()[0]
-
         else:
             resp.status = falcon.HTTP_404
             resp.media = { 'message': 'Exchange not found.' }
@@ -47,9 +46,9 @@ class GetAssetPrice:
         if len(baseGiven) < 32 and len(quoteGiven) < 32 and re.match("^[.A-Za-z0-9_-]*$", baseGiven) and re.match("^[.A-Za-z0-9_-]*$", quoteGiven):
             cursor.execute("SELECT * FROM ticker_prices WHERE base = %s AND quote = %s ORDER BY exchange DESC, timestamp DESC", (baseGiven,quoteGiven))
             returnObjects = []
-            test = cursor.fetchall()
+            tItems = cursor.fetchall()
 
-            for tItem in test:
+            for tItem in tItems:
                 exchangeAlreadyExists = False
                 for returnObject in returnObjects:
                     if returnObject[0] == tItem[0]:
@@ -76,9 +75,9 @@ class GetAssetPriceForExchange:
         if len(baseGiven) < 10 and len(quoteGiven) < 32 and re.match("^[.A-Za-z0-9_-]*$", baseGiven) and re.match("^[.A-Za-z0-9_-]*$", quoteGiven) and exchange in exchangeData:
             cursor.execute("SELECT * FROM ticker_prices WHERE base = %s AND quote = %s AND exchange = %s ORDER BY exchange DESC, timestamp DESC", (baseGiven,quoteGiven,exchange))
             returnObjects = []
-            test = cursor.fetchall()
+            tItems = cursor.fetchall()
 
-            for tItem in test:
+            for tItem in tItems:
                 exchangeAlreadyExists = False
                 for returnObject in returnObjects:
                     if returnObject[0] == tItem[0]:
