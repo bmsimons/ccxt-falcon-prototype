@@ -1,10 +1,10 @@
 import ccxt, pickle, sys, psycopg2, time, threading, json, cfscrape
 
 try:
-        conn = psycopg2.connect("dbname='exchange_db' user='postgres' host='localhost' password='PasswordGoesHere'")
+    conn = psycopg2.connect("dbname='exchange_db' user='postgres' host='localhost' password='PasswordGoesHere'")
 except:
-        print("Can't connect to DB :(")
-        exit()
+    print("Can't connect to DB :(")
+    exit()
 
 exchangeData = {}
 assetsData   = {}
@@ -13,12 +13,12 @@ symbolsData  = {}
 excludeSources = ['coinmarketcap']
 
 for exchange in ccxt.exchanges:
-        try:
-                if not exchange in excludeSources:
-                        exchangeData[exchange] = getattr(ccxt, exchange)().load_markets()
-                        print("Indexed: "+exchange)
-        except:
-                pass
+    try:
+        if not exchange in excludeSources:
+            exchangeData[exchange] = getattr(ccxt, exchange)().load_markets()
+            print("Indexed: "+exchange)
+    except:
+            pass
 
 for exchangeName in list(exchangeData.keys()):
     symbolsData[exchangeName] = []
